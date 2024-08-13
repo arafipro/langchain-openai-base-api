@@ -1,6 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { StringOutputParser } from "@langchain/core/output_parsers";
+import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { ChatOpenAI } from "@langchain/openai";
 import { Hono } from "hono";
 import { z } from "zod";
@@ -22,9 +22,15 @@ app.post("/", zValidator("json", schema), async (c) => {
     new SystemMessage("次の文章を英語から日本語に翻訳してください。"),
     new HumanMessage("hi!"),
   ];
-  const parser = new StringOutputParser();
-  const chain = model.pipe(parser);
-  const res = await chain.invoke(message);
+  const systemTemplate = "次の文章を英語から{language}に翻訳してください。";
+  const promptTemplate = ChatPromptTemplate.fromMessages([
+    ["system", systemTemplate],
+    ["user", "{text}"],
+  ]);
+  const res = await promptTemplate.invoke({ language: "日本語", text: "hi" });
+  // const parser = new StringOutputParser();
+  // const chain = model.pipe(parser);
+  // const res = await chain.invoke(message);
   // const body = await c.req.valid("json");
   return c.json(res);
 });
