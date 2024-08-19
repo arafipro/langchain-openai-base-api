@@ -13,10 +13,12 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>();
 
 const schema = z.object({
-  prompt: z.string(),
+  langauge: z.string(),
+  text: z.string(),
 });
 
 app.post("/", zValidator("json", schema), async (c) => {
+  const { langauge, text } = c.req.valid("json");
   const apiKey = c.env.OPENAI_API_KEY;
   const model = new ChatOpenAI({
     apiKey: apiKey,
@@ -29,7 +31,7 @@ app.post("/", zValidator("json", schema), async (c) => {
   ]);
   const parser = new StringOutputParser();
   const chain = promptTemplate.pipe(model).pipe(parser);
-  const res = await chain.invoke({ language: "日本語", text: "hi" });
+  const res = await chain.invoke({ language: langauge, text: text });
   return c.json(res);
 });
 
