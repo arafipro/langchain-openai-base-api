@@ -1,10 +1,7 @@
 import { zValidator } from "@hono/zod-validator";
-import { StringOutputParser } from "@langchain/core/output_parsers";
-import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { Runnable } from "@langchain/core/runnables";
-import { ChatOpenAI } from "@langchain/openai";
 import { Hono } from "hono";
 import { z } from "zod";
+import { translateText } from "./translate-text";
 
 type Bindings = {
   OPENAI_API_KEY: string;
@@ -13,25 +10,14 @@ type Bindings = {
 const app = new Hono<{ Bindings: Bindings }>();
 
 const schema = z.object({
-  langauge: z.string(),
+  language: z.string(),
   text: z.string(),
 });
 
 app.post("/", zValidator("json", schema), async (c) => {
-  const { langauge, text } = c.req.valid("json");
+  const { language, text } = c.req.valid("json");
   const apiKey = c.env.OPENAI_API_KEY;
-  const model = new ChatOpenAI({
-    apiKey: apiKey,
-    model: "gpt-4o-mini",
-  }) as unknown as Runnable;
-  const systemTemplate = "次の文章を英語から{language}に翻訳してください。";
-  const promptTemplate = ChatPromptTemplate.fromMessages([
-    ["system", systemTemplate],
-    ["user", "{text}"],
-  ]);
-  const parser = new StringOutputParser();
-  const chain = promptTemplate.pipe(model).pipe(parser);
-  const res = await chain.invoke({ language: langauge, text: text });
+  const res = await translateText({ apiKey, language, text });
   return c.json(res);
 });
 
